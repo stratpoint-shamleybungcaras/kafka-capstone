@@ -6,8 +6,6 @@ from config.settings import KAFKA_CONNECT_URL, BRONZE_TOPICS
 
 def create_mongo_sink():
     url = f"{KAFKA_CONNECT_URL}/connectors"
-    
-    # 2DYNAMICALLY JOIN THE BRONZE TOPICS INTO A COMMA-SEPARATED STRING
     bronze_topics_str = ",".join(BRONZE_TOPICS.values())
     
     payload = {
