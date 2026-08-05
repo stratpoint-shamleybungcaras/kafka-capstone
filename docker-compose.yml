@@ -8,9 +8,10 @@ networks:
     driver: bridge
 
 services:
+  # 1. KAFKA (with JMX Exporter for Prometheus)
   kafka:
     build:
-      context: ./jmx-exporter  # Change this to whatever folder contains your new Dockerfile
+      context: ./jmx-exporter  
       dockerfile: Dockerfile
     container_name: capstone-kafka
     networks:
@@ -21,10 +22,8 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
-      # Updated EXTERNAL to port 9093
       KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,EXTERNAL://0.0.0.0:9093'
       KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,EXTERNAL://localhost:9093'
-      # Updated EXTERNAL protocol to enforce passwords (SASL_PLAINTEXT)
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:SASL_PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
@@ -37,10 +36,9 @@ services:
       KAFKA_SASL_ENABLED_MECHANISMS: 'PLAIN'
       KAFKA_LISTENER_NAME_EXTERNAL_SASL_ENABLED_MECHANISMS: 'PLAIN'
       KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: "org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_ADMIN_USER}' password='${KAFKA_ADMIN_PASS}' user_admin='${KAFKA_ADMIN_PASS}' user_producer='${KAFKA_PRODUCER_PASS}' user_consumer='${KAFKA_CONSUMER_PASS}';"      
-      # 2. Trigger the JMX agent baked into the image
       KAFKA_OPTS: "-javaagent:/usr/share/jmx_exporter/jmx_prometheus_javaagent-0.19.0.jar=9999:/usr/share/jmx_exporter/kafka-jmx.yml"
     
-    # 2. CONFLUENT SCHEMA REGISTRY
+  # 2. CONFLUENT SCHEMA REGISTRY
   schema-registry:
     image: confluentinc/cp-schema-registry:7.7.0
     container_name: capstone-schema-registry
@@ -61,7 +59,7 @@ services:
       timeout: 3s
       retries: 5
 
-    # 3. CUSTOM KAFKA CONNECT (PostgreSQL Sink)
+  # 3. CUSTOM KAFKA CONNECT (PostgreSQL Sink)
   kafka-connect:
     build:
       context: ./connect
@@ -95,7 +93,7 @@ services:
       CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
 
-    # 4. KAFKA UI (Kafka Dashboard)
+  # 4. KAFKA UI (Kafka Dashboard)
   kafka-ui: 
     image: provectuslabs/kafka-ui:latest
     container_name: capstone-kafka-ui
@@ -123,7 +121,7 @@ services:
       DYNAMIC_CONFIG_ENABLED: 'true'  
 
 
-    # 5. POSTGRESQL DATABASE (Analytics Destination)
+  # 5. POSTGRESQL DATABASE (Analytics Destination)
   postgres:
     image: postgres:16-alpine
     container_name: capstone-postgres
@@ -143,7 +141,7 @@ services:
       timeout: 3s
       retries: 5
 
-    # 6. PROMETHEUS (Waits for Kafka to be healthy)
+  # 6. PROMETHEUS (Waits for Kafka to be healthy)
   prometheus:
     image: prom/prometheus:v2.51.0
     container_name: capstone-prometheus
@@ -162,7 +160,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # 3. GRAFANA (Waits for Prometheus to be healthy)
+  # 7. GRAFANA (Waits for Prometheus to be healthy)
   grafana:
     image: grafana/grafana:10.4.0
     container_name: capstone-grafana

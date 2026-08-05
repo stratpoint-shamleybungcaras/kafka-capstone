@@ -70,7 +70,7 @@ class EcommerceDataGenerator:
             "items": items,
             "total_amount": round(total, 2),
             "discount_applied": fake.boolean(chance_of_getting_true=30),
-            "order_timestamp": int(time.time() * 1000) # ALWAYS AN INTEGER
+            "order_timestamp": int(time.time() * 1000) 
         }
 
     def generate_payment(self, order_id: str, amount: float) -> Dict[str, Any]:
@@ -80,7 +80,7 @@ class EcommerceDataGenerator:
             "payment_id": f"pay_{uuid.uuid4().hex[:10]}",
             "order_id": order_id,
             "amount": amount,
-            "status": "SUCCESS" if is_success else "FAILED", # THIS DRIVES THE DLQ NOW
+            "status": "SUCCESS" if is_success else "FAILED", 
             "risk_score": round(random.uniform(0.0, 1.0), 2),
             "card_network": random.choice(["VISA", "MASTERCARD", "AMEX", None]), 
             "timestamp": int(time.time() * 1000)

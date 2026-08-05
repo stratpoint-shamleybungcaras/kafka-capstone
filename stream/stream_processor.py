@@ -7,8 +7,6 @@ import os
 import time
 from fastavro import parse_schema, schemaless_reader
 from faust.auth import SASLCredentials
-
-# Load dotenv if it's not already being loaded by settings.py
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -21,7 +19,7 @@ from config.settings import (
     DLQ_TOPICS
 )
 
-# SECURE FAUST CONFIGURATION (No hardcoded passwords!)
+# Faust Configuration
 app = faust.App(
     'silver-topics-flattener-v1', 
     broker=FAUST_BROKER_URL,
@@ -33,7 +31,7 @@ app = faust.App(
     consumer_auto_offset_reset='earliest'
 )
 
-# 1. AVRO DECODER
+# Avro decoder
 schema_cache = {}
 
 def decode_confluent_avro(raw_bytes):
@@ -52,7 +50,7 @@ def decode_confluent_avro(raw_bytes):
     bytes_reader = io.BytesIO(raw_bytes[5:])
     return schemaless_reader(bytes_reader, schema_cache[schema_id])
 
-# 2. TOPIC DEFINITIONS (Using Config Maps)
+# Topic Trio Creator
 def create_topic_trio(entity):
     """Returns a tuple of (bronze, silver, dlq) topics for a given entity."""
     bronze = app.topic(BRONZE_TOPICS[entity], value_serializer='raw')
@@ -67,9 +65,9 @@ products_topic, products_silver_topic, products_dlq_topic = create_topic_trio('p
 users_topic, users_silver_topic, users_dlq_topic = create_topic_trio('users')
 
 
-# 3. SCHEMA ENVELOPES FOR POSTGRES
+# Schema Definitions for Silver Topics (for reference and validation)
 user_schema = {
-    "type": "struct", "name": "users_silver",  # Updated to match silver naming
+    "type": "struct", "name": "users_silver",  
     "fields": [
         {"type": "string", "optional": True, "field": "user_id"},
         {"type": "string", "optional": True, "field": "email"},
@@ -81,7 +79,7 @@ user_schema = {
 }
 
 product_schema = {
-    "type": "struct", "name": "products_silver", # Updated to match silver naming
+    "type": "struct", "name": "products_silver", 
     "fields": [
         {"type": "string", "optional": True, "field": "product_id"},
         {"type": "string", "optional": True, "field": "name"},
@@ -92,7 +90,7 @@ product_schema = {
 }
 
 order_schema = {
-    "type": "struct", "name": "orders_silver", # Updated to match silver naming
+    "type": "struct", "name": "orders_silver", 
     "fields": [
         {"type": "string", "optional": True, "field": "order_id"},
         {"type": "string", "optional": True, "field": "user_id"},
@@ -103,7 +101,7 @@ order_schema = {
 }
 
 payment_schema = {
-    "type": "struct", "name": "payments_silver", # Updated to match silver naming
+    "type": "struct", "name": "payments_silver", 
     "fields": [
         {"type": "string", "optional": True, "field": "payment_id"},
         {"type": "string", "optional": True, "field": "order_id"},

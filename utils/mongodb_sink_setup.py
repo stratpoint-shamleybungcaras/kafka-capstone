@@ -1,13 +1,13 @@
 import requests
 import json
 
-# 1. IMPORT CONFIGURATIONS
+# IMPORT CONFIGURATIONS
 from config.settings import KAFKA_CONNECT_URL, BRONZE_TOPICS
 
 def create_mongo_sink():
     url = f"{KAFKA_CONNECT_URL}/connectors"
     
-    # 2. DYNAMICALLY JOIN THE BRONZE TOPICS INTO A COMMA-SEPARATED STRING
+    # 2DYNAMICALLY JOIN THE BRONZE TOPICS INTO A COMMA-SEPARATED STRING
     bronze_topics_str = ",".join(BRONZE_TOPICS.values())
     
     payload = {
@@ -24,7 +24,6 @@ def create_mongo_sink():
             
             "key.converter": "org.apache.kafka.connect.storage.StringConverter",
             "value.converter": "io.confluent.connect.avro.AvroConverter",
-            # Note: We keep the internal Docker URL here because Kafka Connect runs INSIDE docker
             "value.converter.schema.registry.url": "http://capstone-schema-registry:8081"
         }
     }

@@ -3,7 +3,6 @@ import psycopg2
 def setup_database():
     print("Connecting to PostgreSQL at localhost:5433...")
     try:
-        # These credentials now perfectly match your docker-compose.yml
         conn = psycopg2.connect(
             host="localhost",
             port="5433",
@@ -12,7 +11,6 @@ def setup_database():
             password="postgres"
         )
         
-        # Enable auto-commit so we don't have to manually commit table creations
         conn.autocommit = True
         cursor = conn.cursor()
 

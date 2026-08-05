@@ -43,6 +43,7 @@ SILVER_TOPICS = {
     "payments": "payment-silver"
 }
 
+# Rejected Message Topics (Dead Letter Queue)
 DLQ_TOPICS = {
     "users": "user-dlq",
     "products": "product-dlq",

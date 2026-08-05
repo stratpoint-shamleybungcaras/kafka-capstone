@@ -1,14 +1,11 @@
 import requests
 import json
 
-# 1. IMPORT CONFIGURATIONS
+# IMPORT CONFIGURATIONS
 from config.settings import KAFKA_CONNECT_URL, SILVER_TOPICS
 
 def setup_postgres_sink():
-    # Use PUT to overwrite/update the configuration easily
     url = f"{KAFKA_CONNECT_URL}/connectors/postgres-sink-connector/config"
-    
-    # 2. DYNAMICALLY JOIN THE SILVER TOPICS
     silver_topics_str = ",".join(SILVER_TOPICS.values())
     
     config = {

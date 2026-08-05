@@ -39,15 +39,15 @@ def main():
     pipeline_topics = list(BRONZE_TOPICS.values())
     serializers = create_serializers(sr_client, pipeline_topics)
 
-    # SECURE PRODUCER CONFIGURATION
+    # Producer Configuration with SASL Authentication
     producer_config = {
         'bootstrap.servers': KAFKA_BROKER,
         'client.id': 'capstone-master-producer',
-        **SASL_CONFIG,                                # Injects your credentials
+        **SASL_CONFIG,                               
         'enable.idempotence': True,
         'acks': 'all',
         'max.in.flight.requests.per.connection': 1,
-        'broker.address.family': 'v4',                # Fixes the MacOS Localhost socket drop
+        'broker.address.family': 'v4',                
     }
     
     producer = Producer(producer_config)
@@ -56,7 +56,7 @@ def main():
     print("\nStarting Live Data Stream... (Press Ctrl+C to stop)")
     try:
         while True:
-            # Step A: Generate the raw data
+            # Generate the raw data
             user_data = data_engine.generate_user()
             product_data = data_engine.generate_product()
             order_data = data_engine.generate_order()
@@ -65,7 +65,7 @@ def main():
                 amount=order_data["total_amount"]
             )
 
-            # Step B: Map data using the BRONZE_TOPICS dictionary
+            # Map data using the BRONZE_TOPICS dictionary
             events_to_send = [
                 (BRONZE_TOPICS["users"], user_data["user_id"], user_data),
                 (BRONZE_TOPICS["products"], product_data["product_id"], product_data),
@@ -73,11 +73,11 @@ def main():
                 (BRONZE_TOPICS["payments"], payment_data["payment_id"], payment_data)
             ]
 
-            # Step C: Serialize and push to Kafka
+            # Serialize and push to Kafka
             for topic, key, payload in events_to_send:
                 producer.produce(
                     topic=topic,
-                    key=str(key), # Ensure key is a string
+                    key=str(key), 
                     value=serializers[topic](
                         payload, 
                         SerializationContext(topic, MessageField.VALUE)

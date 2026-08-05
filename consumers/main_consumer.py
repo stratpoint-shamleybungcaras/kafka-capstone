@@ -25,7 +25,7 @@ def get_consumer_configs(group_id: str = "kafka-capstone-group"):
         "value.deserializer": avro_deserializer,
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,
-        **SASL_CONFIG  # Inject security credentials
+        **SASL_CONFIG  
     }
     return config
 
@@ -40,8 +40,6 @@ def get_dlq_producer():
 def run_consumer(topics: list):
     consumer = DeserializingConsumer(get_consumer_configs())
     dlq_producer = get_dlq_producer()
-    
-    # DYNAMIC MAPPING: Matches e.g., 'user-bronze' -> 'user-dlq'
     topic_to_dlq = {BRONZE_TOPICS[key]: DLQ_TOPICS.get(key, "general-dlq") for key in BRONZE_TOPICS}
     
     consumer.subscribe(topics)

@@ -3,15 +3,21 @@ import sys
 from confluent_kafka.admin import AdminClient, NewTopic
 from confluent_kafka.schema_registry import SchemaRegistryClient, Schema
 
-# 1. IMPORT YOUR CENTRALIZED CONFIGURATION
-from config.settings import KAFKA_BROKER, SCHEMA_REGISTRY_URL, BRONZE_TOPICS, DLQ_TOPICS, SASL_CONFIG
+# IMPORT YOUR CENTRALIZED CONFIGURATION
+from config.settings import (
+    KAFKA_BROKER, 
+    SCHEMA_REGISTRY_URL, 
+    BRONZE_TOPICS, 
+    SILVER_TOPICS, 
+    DLQ_TOPICS, 
+    SASL_CONFIG
+    )
 
 class SchemaManager:
     """
     A centralized manager for interacting with the Confluent Schema Registry
     and provisioning Kafka topics with custom partitions and retention policies.
     """
-    # 2. DEFAULT TO YOUR CONFIG VARIABLES
     def __init__(self, registry_url=SCHEMA_REGISTRY_URL, broker_url=KAFKA_BROKER):
         self.schema_registry_url = registry_url
         self.broker_url = broker_url
@@ -95,13 +101,10 @@ class SchemaManager:
 
 
 if __name__ == "__main__":
-    # 1. IMPORT SILVER & DLQ TOPICS
-    from config.settings import SILVER_TOPICS, DLQ_TOPICS
-
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     SCHEMA_DIR = os.path.join(BASE_DIR, "..", "schema")
 
-    # 2. DYNAMICALLY MAP SCHEMAS TO BRONZE TOPICS
+    # Map Schemas to their respective Bronze Topics
     schemas_to_upload = {
         BRONZE_TOPICS["users"]: os.path.join(SCHEMA_DIR, "user_events.avsc"),
         BRONZE_TOPICS["products"]: os.path.join(SCHEMA_DIR, "product_events.avsc"),
