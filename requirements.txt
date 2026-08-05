@@ -11,4 +11,4 @@ faker==22.5.1
 
 # Streaming and data processing dependencies
 faust-streaming==0.11.2
-psycopg2-binary>=2.9.9
+psycopg2-binary>=2.9.9a

@@ -4,7 +4,7 @@ from confluent_kafka.admin import AdminClient, NewTopic
 from confluent_kafka.schema_registry import SchemaRegistryClient, Schema
 
 # 1. IMPORT YOUR CENTRALIZED CONFIGURATION
-from config.settings import KAFKA_BROKER, SCHEMA_REGISTRY_URL, BRONZE_TOPICS, SASL_CONFIG
+from config.settings import KAFKA_BROKER, SCHEMA_REGISTRY_URL, BRONZE_TOPICS, DLQ_TOPICS, SASL_CONFIG
 
 class SchemaManager:
     """
@@ -95,10 +95,13 @@ class SchemaManager:
 
 
 if __name__ == "__main__":
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    SCHEMA_DIR = os.path.join(BASE_DIR, ".." , "schema")
+    # 1. IMPORT SILVER & DLQ TOPICS
+    from config.settings import SILVER_TOPICS, DLQ_TOPICS
 
-    # 3. DYNAMICALLY MAP SCHEMAS TO YOUR BRONZE TOPICS
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    SCHEMA_DIR = os.path.join(BASE_DIR, "..", "schema")
+
+    # 2. DYNAMICALLY MAP SCHEMAS TO BRONZE TOPICS
     schemas_to_upload = {
         BRONZE_TOPICS["users"]: os.path.join(SCHEMA_DIR, "user_events.avsc"),
         BRONZE_TOPICS["products"]: os.path.join(SCHEMA_DIR, "product_events.avsc"),
@@ -106,13 +109,18 @@ if __name__ == "__main__":
         BRONZE_TOPICS["payments"]: os.path.join(SCHEMA_DIR, "payment_events.avsc")
     }
 
-    topics_list = list(schemas_to_upload.keys())
+    # 3. COLLECT ALL TOPICS (Bronze + Silver + DLQ) TO PROVISION
+    all_topics_to_create = (
+        list(BRONZE_TOPICS.values()) + 
+        list(SILVER_TOPICS.values()) + 
+        list(DLQ_TOPICS.values())
+    )
 
     print("Initializing Capstone Cluster Manager...\n")
     manager = SchemaManager()
     
     print("--- Phase 1: Broker Infrastructure Initialization ---")
-    manager.provision_topics(topics_list, num_partitions=3)
+    manager.provision_topics(all_topics_to_create, num_partitions=3)
     
     print("\n--- Phase 2: Schema Registry Registration ---")
     for topic, path in schemas_to_upload.items():

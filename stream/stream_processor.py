@@ -4,6 +4,7 @@ import io
 import requests
 import json
 import os
+import time
 from fastavro import parse_schema, schemaless_reader
 from faust.auth import SASLCredentials
 
@@ -16,7 +17,8 @@ from config.settings import (
     FAUST_BROKER_URL, 
     SCHEMA_REGISTRY_URL, 
     BRONZE_TOPICS, 
-    SILVER_TOPICS
+    SILVER_TOPICS,
+    DLQ_TOPICS
 )
 
 # SECURE FAUST CONFIGURATION (No hardcoded passwords!)
@@ -55,13 +57,13 @@ def create_topic_trio(entity):
     """Returns a tuple of (bronze, silver, dlq) topics for a given entity."""
     bronze = app.topic(BRONZE_TOPICS[entity], value_serializer='raw')
     silver = app.topic(SILVER_TOPICS[entity])
-    dlq    = app.topic(DLQ_TOPICS[entity], value_serializer='raw')
+    dlq    = app.topic(DLQ_TOPICS[entity], value_serializer='json')
     return bronze, silver, dlq
 
 # Unpack topics cleanly
 orders_topic, orders_silver_topic, orders_dlq_topic = create_topic_trio('orders')
 payments_topic, payments_silver_topic, payments_dlq_topic = create_topic_trio('payments')
-product_topic, products_silver_topic, products_dlq_topic = create_topic_trio('products')
+products_topic, products_silver_topic, products_dlq_topic = create_topic_trio('products')
 users_topic, users_silver_topic, users_dlq_topic = create_topic_trio('users')
 
 
@@ -113,19 +115,25 @@ payment_schema = {
     ]
 }
 
-# ==========================================
 # 4. AGENTS
-# ==========================================
-
 @app.agent(users_topic)
 async def process_users(stream):
     async for raw_bytes in stream:
-        print(f"DEBUG [USERS]: Received bytes...")
         try:
             user = decode_confluent_avro(raw_bytes)
             if not user: continue
             
             prefs = user.get("preferences", {})
+            
+            # DEMO FILTER: Reject users who opted out of emails
+            if prefs.get("email_opt_in") is False:
+                await users_dlq_topic.send(value={
+                    "error_message": "Business Rule: User opted out of marketing emails.",
+                    "failed_at": int(time.time() * 1000),
+                    "original_payload": user
+                })
+                continue
+
             silver_user = {
                 "user_id": user.get("user_id"),
                 "email": user.get("email"),
@@ -135,46 +143,63 @@ async def process_users(stream):
                 "created_at": user.get("created_at")
             }
             await users_silver_topic.send(value={"schema": user_schema, "payload": silver_user})
-            print(f"SUCCESS [USERS]: Sent silver user {silver_user['user_id']}")
+        
         except Exception as e:
-            print(f"CRITICAL ERROR [USERS]: {e} -> Sending to DLQ")
-            # Send raw bytes or a structured error payload to the DLQ topic
-            await users_dlq_topic.send(value=raw_bytes)
+            await users_dlq_topic.send(value={
+                "error_message": f"System Error: {str(e)}",
+                "original_payload": "Failed to decode Avro bytes"
+            })
 
 
 @app.agent(products_topic)
 async def process_products(stream):
     async for raw_bytes in stream:
-        print(f"DEBUG [PRODUCTS]: Received bytes...")
         try:
             product = decode_confluent_avro(raw_bytes)
             if not product: continue
             
+            # DEMO FILTER: Reject digital downloads
+            if product.get("is_digital_download") is True:
+                await products_dlq_topic.send(value={
+                    "error_message": "Business Rule: Digital downloads are handled by a different pipeline.",
+                    "failed_at": int(time.time() * 1000),
+                    "original_payload": product
+                })
+                continue
+
             tags_array = product.get("tags") or []
-            tags_string = ",".join(tags_array)
             silver_product = {
                 "product_id": product.get("product_id"),
                 "name": product.get("name"),
                 "price": product.get("price"),
-                "tags": tags_string,
+                "tags": ",".join(tags_array),
                 "is_digital_download": product.get("is_digital_download")
             }
             await products_silver_topic.send(value={"schema": product_schema, "payload": silver_product})
-            print(f"SUCCESS [PRODUCTS]: Sent silver product {silver_product['product_id']}")
+            
         except Exception as e:
-            print(f"CRITICAL ERROR [USERS]: {e} -> Sending to DLQ")
-            # Send raw bytes or a structured error payload to the DLQ topic
-            await products_dlq_topic.send(value=raw_bytes)
+            await products_dlq_topic.send(value={
+                "error_message": f"System Error: {str(e)}",
+                "original_payload": "Failed to decode Avro bytes"
+            })
 
 
 @app.agent(orders_topic)
 async def process_orders(stream):
     async for raw_bytes in stream:
-        print(f"DEBUG [ORDERS]: Received bytes...")
         try:
             order = decode_confluent_avro(raw_bytes)
             if not order: continue
             
+            # DEMO FILTER: Reject micro-orders (less than $15)
+            if order.get("total_amount", 0) < 15.00:
+                await orders_dlq_topic.send(value={
+                    "error_message": "Business Rule: Order total below minimum threshold ($15.00).",
+                    "failed_at": int(time.time() * 1000),
+                    "original_payload": order
+                })
+                continue
+
             silver_order = {
                 "order_id": order.get("order_id"),
                 "user_id": order.get("user_id"),
@@ -183,27 +208,37 @@ async def process_orders(stream):
                 "order_timestamp": order.get("order_timestamp")
             }
             await orders_silver_topic.send(value={"schema": order_schema, "payload": silver_order})
-            print(f"SUCCESS [ORDERS]: Sent silver order {silver_order['order_id']}")
+            
         except Exception as e:
-            print(f"CRITICAL ERROR [USERS]: {e} -> Sending to DLQ")
-            # Send raw bytes or a structured error payload to the DLQ topic
-            await orders_dlq_topic.send(value=raw_bytes)
+            await orders_dlq_topic.send(value={
+                "error_message": f"System Error: {str(e)}",
+                "original_payload": "Failed to decode Avro bytes"
+            })
 
 
 @app.agent(payments_topic)
 async def process_payments(stream):
     async for raw_bytes in stream:
-        print(f"DEBUG [PAYMENTS]: Received bytes...")
         try:
             payment = decode_confluent_avro(raw_bytes)
             if not payment: continue
             
+            # DEMO FILTER: Reject failed payments
+            if payment.get("status") == "FAILED":
+                await payments_dlq_topic.send(value={
+                    "error_message": "Business Rule: Payment status is FAILED.",
+                    "failed_at": int(time.time() * 1000),
+                    "original_payload": payment
+                })
+                continue 
+            
             await payments_silver_topic.send(value={"schema": payment_schema, "payload": payment})
-            print(f"SUCCESS [PAYMENTS]: Sent silver payment {payment['payment_id']}")
+            
         except Exception as e:
-            print(f"CRITICAL ERROR [USERS]: {e} -> Sending to DLQ")
-            # Send raw bytes or a structured error payload to the DLQ topic
-            await payments_dlq_topic.send(value=raw_bytes)
-
+            await payments_dlq_topic.send(value={
+                "error_message": f"System Error: {str(e)}",
+                "original_payload": "Failed to decode Avro bytes"
+            })
+            
 if __name__ == '__main__':
     app.main()
