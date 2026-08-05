@@ -1,0 +1,14 @@
+# Environment variables & Configuration
+python-dotenv==1.0.1
+
+# Kafka and Avro dependencies
+confluent-kafka==2.3.0
+fastavro
+requests==2.31.0
+
+# Dummy data generator dependencies
+faker==22.5.1
+
+# Streaming and data processing dependencies
+faust-streaming==0.11.2
+psycopg2-binary>=2.9.9

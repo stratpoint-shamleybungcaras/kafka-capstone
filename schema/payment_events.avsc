@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "PaymentEvent",
+  "namespace": "com.capstone.ecommerce",
+  "doc": "Payment Transaction processing events",
+  "fields": [
+    {"name": "payment_id", "type": "string"},
+    {"name": "order_id", "type": "string"},
+    {"name": "amount", "type": "double"},
+    {"name": "status", "type": "string"},
+    {"name": "risk_score", "type": "double", "default": 0.0},
+    {"name": "card_network", "type": ["null", "string"], "default": null},
+    {"name": "timestamp", "type": "long"}
+  ]
+}

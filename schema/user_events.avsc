@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "UserEvent",
+  "namespace": "com.capstone.ecommerce",
+  "doc": " User registration and profile events",
+  "fields": [
+    {"name": "user_id", "type": "string"},
+    {"name": "email", "type": "string"},
+    {"name": "is_active", "type": "boolean", "default": true},
+    {"name": "preferences", "type": {
+        "type": "record",
+        "name": "Preferences",
+        "fields": [
+          {"name": "email_opt_in", "type": "boolean", "default": false},
+          {"name": "preferred_currency", "type": "string", "default": "USD"}
+        ]
+    }},
+    {"name": "created_at", "type": "long"}
+  ]
+}

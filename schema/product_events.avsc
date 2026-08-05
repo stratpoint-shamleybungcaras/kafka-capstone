@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "ProductEvent",
+  "namespace": "com.capstone.ecommerce",
+  "doc": "Product catalog events",
+  "fields": [
+    {"name": "product_id", "type": "string"},
+    {"name": "name", "type": "string"},
+    {"name": "price", "type": "double"},
+    {"name": "tags", "type": {"type": "array", "items": "string"}, "default": []},
+    {"name": "is_digital_download", "type": "boolean", "default": false}
+  ]
+}

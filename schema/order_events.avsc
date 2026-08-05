@@ -1,0 +1,25 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "com.capstone.ecommerce",
+  "doc": " Order processing events",
+  "fields": [
+    {"name": "order_id", "type": "string"},
+    {"name": "user_id", "type": "string"},
+    {"name": "items", "type": {
+        "type": "array",
+        "items": {
+            "type": "record",
+            "name": "OrderItem",
+            "fields": [
+                {"name": "product_id", "type": "string"},
+                {"name": "quantity", "type": "int", "default": 1},
+                {"name": "unit_price", "type": "double"}
+            ]
+        }
+    }, "default": []},
+    {"name": "total_amount", "type": "double"},
+    {"name": "discount_applied", "type": "boolean", "default": false},
+    {"name": "order_timestamp", "type": "long"}
+  ]
+}
